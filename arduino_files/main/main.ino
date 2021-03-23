@@ -28,6 +28,7 @@ long en_counter_time;                 // encoders counter sampling time
 double wheel_w[] = {0, 0, 0};         // acctual omega of the wheels (rad/s)
 double motor_pwm[] = {0, 0, 0};       // controller effort
 double wheel_w_ds[] = {0, 0, 0};      // desigered omega of the wheels (rad/s)
+double w = 0 , vx = 0, vy = 0;        // robot's desigered status
 
 const double Kp = 8, Ki = 130, Kd = 0.0;        // pid controller for wheels speed control
 const double pidSampelingTime = 50;             // pid Sampeling Time (ms)
@@ -59,7 +60,7 @@ void setup() {
 
   timer.every(pidSampelingTime, update_wheel_speed);                 // sampling period
 
-//  tuning_setpoint_timer.every(2000, setpoint_generator);            // setpoint change interval for pid tuning
+  //  tuning_setpoint_timer.every(2000, setpoint_generator);            // setpoint change interval for pid tuning
 
   motor_1_speed_pid.SetMode(AUTOMATIC);                             // pid init
   motor_2_speed_pid.SetMode(AUTOMATIC);
@@ -73,7 +74,8 @@ void setup() {
 
 
 void loop() {
-  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
+  calculate_wheel_w(w, vx, vy);      // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
+  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
 }

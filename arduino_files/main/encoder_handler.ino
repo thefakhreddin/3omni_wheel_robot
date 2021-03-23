@@ -52,19 +52,19 @@ void encoder_handler_2_b() {
 
 void encoder_handler_3_a() {
   if (digitalRead(encoder_3_a)) {
-    if (!digitalRead(encoder_3_b)) en_counter[2]++;
-    else en_counter[2]--;
+    if (!digitalRead(encoder_3_b)) en_counter[2]--;
+    else en_counter[2]++;
   } else {
-    if (digitalRead(encoder_3_b)) en_counter[2]++;
-    else en_counter[2]--;
+    if (digitalRead(encoder_3_b)) en_counter[2]--;
+    else en_counter[2]++;
   }
 }
 void encoder_handler_3_b() {
   if (digitalRead(encoder_3_b)) {
-    if (digitalRead(encoder_3_a)) en_counter[2]++;
-    else en_counter[2]--;
+    if (digitalRead(encoder_3_a)) en_counter[2]--;
+    else en_counter[2]++;
   } else {
-    if (!digitalRead(encoder_3_a)) en_counter[2]++;
-    else en_counter[2]--;
+    if (!digitalRead(encoder_3_a)) en_counter[2]--;
+    else en_counter[2]++;
   }
 }
