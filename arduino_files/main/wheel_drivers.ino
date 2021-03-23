@@ -18,3 +18,8 @@ void turn_wheel(int wheel_no, int omega) {
   digitalWrite(b, omega > 0 ? LOW : HIGH);
   analogWrite(pwm, abs(omega));
 }
+
+void apply_to_motors() {           // apply controller effort on the motors
+  for (int i = 0; i < 3; i++)
+    turn_wheel(i + 1, motor_pwm[i]);
+}

@@ -1,17 +1,3 @@
-boolean update_wheel_speed(void *) {
-  for (int i = 0; i < 3; i++) {                                                   // for each wheel
-    float en_counted = en_counter_old[i] - en_counter[i];                         // determine how many paulses has elapsed
-    long en_time_elapsed = millis() - en_counter_time;                            // the sampling timing window
-    en_counter_old[i] = en_counter[i];                                            // update the counter log for each wheel
-    wheel_w[i] = ((en_counted / rotation_pls) * 2000 * PI) / en_time_elapsed;     // calculate the omega of each wheel
-  }
-  en_counter_time = millis();                                                     // log the last sampling time
-  motor_1_speed_pid.Compute();                                                    // update pid effort
-  motor_2_speed_pid.Compute();
-  motor_3_speed_pid.Compute();
-  return true;                                                                    // is necessary for the timer to resume
-}
-
 void encoder_handler_1_a() {                                                      // get called when signal "a" status changes
   if (digitalRead(encoder_1_a)) {                                                 // if "a" is rised
     if (!digitalRead(encoder_1_b)) en_counter[0]++;                               // if the "b" signal is low increment counter
