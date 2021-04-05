@@ -3,7 +3,7 @@ void refresh_timers() {
   tuning_setpoint_timer.tick();                                                   // refresh the timer for pid tuning
 }
 
-boolean update_wheel_speed(void *) {
+boolean update_pid_controllers(void *) {
   for (int i = 0; i < 3; i++) {                                                   // for each wheel
     float en_counted = en_counter_old[i] - en_counter[i];                         // determine how many paulses has elapsed
     long en_time_elapsed = millis() - en_counter_time;                            // the sampling timing window
@@ -14,6 +14,7 @@ boolean update_wheel_speed(void *) {
   motor_1_speed_pid.Compute();                                                    // update pid effort
   motor_2_speed_pid.Compute();
   motor_3_speed_pid.Compute();
+  yaw_angle_compensator.Compute();
   return true;                                                                    // is necessary for the timer to resume
 }
 
@@ -28,8 +29,8 @@ void monitor_motor_speed() {
     //  int i = 0;
     Serial.print(wheel_w_ds[i]);
     Serial.print(" ");
-    Serial.print(wheel_w[i]);
-    Serial.print(" ");
+//    Serial.print(wheel_w[i]);
+//    Serial.print(" ");
   }
   Serial.println();
 }
