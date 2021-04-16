@@ -36,10 +36,11 @@ double wheel_w_ds[] = {0, 0, 0};      // desigered omega of the wheels (rad/s)
 double w = 0 , vx = 0, vy = 0;        // robot's desigered status
 double yaw_w = 0;                     // robot's actual yaw angular vel (yaw dot)
 double yaw_w_ds = 0;                  // robot's desigered yaw anglular vel (yaw dot)
+double yaw = 0;                       // robot's actual yaw angle in degrees
 
-const double Kp_wheel = 8, Ki_wheel = 130, Kd_wheel = 0.0;        // pid controller for wheels speed control
-const double Kp_yaw   = 1, Ki_yaw   = 0, Kd_yaw   = 0.0;        // pid controller for yaw angle
-const double pidSampelingTime = 50;                               // pid Sampeling Time (ms)
+const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;        // pid controller for wheels speed control
+const double Kp_yaw   = 2, Ki_yaw   = 0, Kd_yaw   = 0.1;        // pid controller for yaw angle
+const double pidSampelingTime = 20;                               // pid Sampeling Time (ms)
 
 auto timer = timer_create_default();                    // timer object for sampling the encoder
 
@@ -72,7 +73,7 @@ void setup() {
 
   timer.every(pidSampelingTime, update_pid_controllers);                // sampling period
 
-  //  tuning_setpoint_timer.every(2000, setpoint_generator);            // setpoint change interval for pid tuning
+  //    tuning_setpoint_timer.every(3000, setpoint_generator);                // setpoint change interval for pid tuning
 
   motor_1_speed_pid.SetMode(AUTOMATIC);                                 // pid init
   motor_2_speed_pid.SetMode(AUTOMATIC);
@@ -90,10 +91,13 @@ void setup() {
 
 
 void loop() {
-  Serial.println("hhhh");
-  get_yaw_angle();                   // read the yaw angle from IMU
+  perform_straight_line_once();
+
+
+
+  //  get_yaw_angle();                   // read the yaw angle from IMU
   calculate_wheel_w(w, vx, vy);      // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
-//  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
+  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
 }

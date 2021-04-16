@@ -14,7 +14,7 @@ boolean update_pid_controllers(void *) {
   motor_1_speed_pid.Compute();                                                    // update pid effort
   motor_2_speed_pid.Compute();
   motor_3_speed_pid.Compute();
-  yaw_angle_compensator.Compute();
+//  yaw_angle_compensator.Compute();
   return true;                                                                    // is necessary for the timer to resume
 }
 
@@ -26,11 +26,11 @@ boolean setpoint_generator(void *) {
 
 void monitor_motor_speed() {
   for (int i = 0; i < 3; i++) {
-    //  int i = 0;
+    //      int i = 0;
     Serial.print(wheel_w_ds[i]);
     Serial.print(" ");
-//    Serial.print(wheel_w[i]);
-//    Serial.print(" ");
+    Serial.print(wheel_w[i]);
+    Serial.print(" ");
   }
   Serial.println();
 }

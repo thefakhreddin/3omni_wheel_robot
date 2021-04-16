@@ -13,10 +13,15 @@ void turn_wheel(int wheel_no, int omega) {
     b = motor_3_b;
     pwm = motor_3_pwm;
   }
-
-  digitalWrite(a, omega > 0 ? HIGH : LOW);
-  digitalWrite(b, omega > 0 ? LOW : HIGH);
-  analogWrite(pwm, abs(omega));
+  
+  if (pwm != 0) {                                   // drive
+    digitalWrite(a, omega > 0 ? HIGH : LOW);
+    digitalWrite(b, omega > 0 ? LOW : HIGH);
+    analogWrite(pwm, abs(omega));
+  } else {                                          // break
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+  }
 }
 
 void apply_to_motors() {           // apply controller effort on the motors
