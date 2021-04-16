@@ -1,8 +1,8 @@
 void perform_circle_menoeuvre() {
   double q = millis();
-  q /= 2500;
-  vx = -0.5 * sin(2 * PI * q);
-  vy = 0.5 * cos(2 * PI * q);
+  q /= 5000;
+  vx = -0.3 * sin(2 * PI * q);
+  vy = 0.3 * cos(2 * PI * q);
 
   //  Serial.print(vx);
   //  Serial.print(" ");
