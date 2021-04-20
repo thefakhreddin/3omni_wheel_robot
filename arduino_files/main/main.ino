@@ -3,8 +3,10 @@
 #include <Wire.h>
 #include <GY80.h>
 
-#include "ros.h"
-#include "geometry_msgs/Twist.h"
+#define USE_USBCON
+#include <ros.h>
+#include <geometry_msgs/Pose2D.h>
+
 
 
 #define encoder_1_a 22
@@ -38,9 +40,9 @@ double yaw_w = 0;                     // robot's actual yaw angular vel (yaw dot
 double yaw_w_ds = 0;                  // robot's desigered yaw anglular vel (yaw dot)
 double yaw = 0;                       // robot's actual yaw angle in degrees
 
-const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;        // pid controller for wheels speed control
+const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;         // pid controller for wheels speed control
 const double Kp_yaw   = 2, Ki_yaw   = 0, Kd_yaw   = 0.1;        // pid controller for yaw angle
-const double pidSampelingTime = 20;                               // pid Sampeling Time (ms)
+const double pidSampelingTime = 20;                             // pid Sampeling Time (ms)
 
 auto timer = timer_create_default();                    // timer object for sampling the encoder
 
@@ -53,6 +55,18 @@ PID yaw_angle_compensator(&yaw_w, &w, &yaw_w_ds, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT)
 
 GY80 IMU = GY80();                                                                       // IMU object of GY80 class
 
+ros::NodeHandle  nh;                                                                     // ROS node handler
+
+void update_cmd_pos( const geometry_msgs::Pose2D& cmd_pos){                              // input command state handler function
+  float x = cmd_pos.x;
+  float y = cmd_pos.y;
+  float th = cmd_pos.theta;
+  vx=x;
+  vy=y;
+  w=th;
+}
+
+ros::Subscriber<geometry_msgs::Pose2D> sub("cmd_pos", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
 
 void setup() {
   Serial.begin(9600);
@@ -87,17 +101,18 @@ void setup() {
 
   IMU.begin();                                                          // init GY-80
 
+  nh.initNode();                                                        // ROS interface init
+  nh.subscribe(sub);
+
+  pinMode(LED_BUILTIN, OUTPUT);                                         // on-board LED for debugging
+
 }
 
 
 void loop() {
-  perform_circle_menoeuvre();
-
-
-
-  //  get_yaw_angle();                   // read the yaw angle from IMU
+  nh.spinOnce();                     // referesh ROS interface
   calculate_wheel_w(w, vx, vy);      // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
-  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
+  //  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
 }
