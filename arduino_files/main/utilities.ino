@@ -1,6 +1,9 @@
 void refresh_timers() {
   timer.tick();                                                                   // refresh the timer for sampling
+
+  #ifdef PID_TUNUNG
   tuning_setpoint_timer.tick();                                                   // refresh the timer for pid tuning
+  #endif
 }
 
 boolean update_pid_controllers(void *) {

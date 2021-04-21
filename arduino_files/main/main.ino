@@ -1,13 +1,17 @@
+#define USE_USBCON
+//#define PID_TUNING
+//#define READ_IMU
+
 #include <PID_v1.h>
 #include <arduino-timer.h>
+
+#include <ros.h>
+#include <geometry_msgs/Twist.h>
+
+#ifdef READ_IMU
 #include <Wire.h>
 #include <GY80.h>
-
-#define USE_USBCON
-#include <ros.h>
-#include <geometry_msgs/Pose2D.h>
-
-
+#endif
 
 #define encoder_1_a 22
 #define encoder_1_b 23
@@ -36,40 +40,46 @@ double wheel_w[] = {0, 0, 0};         // acctual omega of the wheels (rad/s)
 double motor_pwm[] = {0, 0, 0};       // controller effort
 double wheel_w_ds[] = {0, 0, 0};      // desigered omega of the wheels (rad/s)
 double w = 0 , vx = 0, vy = 0;        // robot's desigered status
-double yaw_w = 0;                     // robot's actual yaw angular vel (yaw dot)
-double yaw_w_ds = 0;                  // robot's desigered yaw anglular vel (yaw dot)
-double yaw = 0;                       // robot's actual yaw angle in degrees
+#ifdef READ_IMU
+double yaw_w = 0;                                    // robot's actual yaw angular vel (yaw dot)
+double yaw_w_ds = 0;                                 // robot's desigered yaw anglular vel (yaw dot)
+double yaw = 0;                                      // robot's actual yaw angle in degrees
+#endif
 
 const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;         // pid controller for wheels speed control
-const double Kp_yaw   = 2, Ki_yaw   = 0, Kd_yaw   = 0.1;        // pid controller for yaw angle
 const double pidSampelingTime = 20;                             // pid Sampeling Time (ms)
 
 auto timer = timer_create_default();                    // timer object for sampling the encoder
 
+#ifdef PID_TUNING
 auto tuning_setpoint_timer = timer_create_default();    // setpoint change for pid tuning
+#endif
 
 PID motor_1_speed_pid(&wheel_w[0], &motor_pwm[0], &wheel_w_ds[0], Kp_wheel, Ki_wheel, Kd_wheel, DIRECT);   // pid controller init for each wheel speed control
 PID motor_2_speed_pid(&wheel_w[1], &motor_pwm[1], &wheel_w_ds[1], Kp_wheel, Ki_wheel, Kd_wheel, DIRECT);
 PID motor_3_speed_pid(&wheel_w[2], &motor_pwm[2], &wheel_w_ds[2], Kp_wheel, Ki_wheel, Kd_wheel, DIRECT);
-PID yaw_angle_compensator(&yaw_w, &w, &yaw_w_ds, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);                          // pid controller init for yaw angle conpensation
 
+#ifdef READ_IMU
 GY80 IMU = GY80();                                                                       // IMU object of GY80 class
+#endif
 
 ros::NodeHandle  nh;                                                                     // ROS node handler
 
-void update_cmd_pos( const geometry_msgs::Pose2D& cmd_pos){                              // input command state handler function
-  float x = cmd_pos.x;
-  float y = cmd_pos.y;
-  float th = cmd_pos.theta;
-  vx=x;
-  vy=y;
-  w=th;
+void update_cmd_pos( const geometry_msgs::Twist& cmd_vel) {                             // input command state handler function
+  float x = cmd_vel.linear.x;
+  float y = cmd_vel.linear.y;
+  float th = cmd_vel.angular.z;
+  vx = x;
+  vy = y;
+  w = th;
 }
 
-ros::Subscriber<geometry_msgs::Pose2D> sub("cmd_pos", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
+ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
 
 void setup() {
+#ifdef PID_TUNING
   Serial.begin(9600);
+#endif
 
   pinMode(encoder_1_a, INPUT_PULLUP);
   pinMode(encoder_1_b, INPUT_PULLUP);
@@ -87,19 +97,21 @@ void setup() {
 
   timer.every(pidSampelingTime, update_pid_controllers);                // sampling period
 
-  //    tuning_setpoint_timer.every(3000, setpoint_generator);                // setpoint change interval for pid tuning
+#ifdef PID_TUNING
+  tuning_setpoint_timer.every(3000, setpoint_generator);                // setpoint change interval for pid tuning
+#endif
 
   motor_1_speed_pid.SetMode(AUTOMATIC);                                 // pid init
   motor_2_speed_pid.SetMode(AUTOMATIC);
   motor_3_speed_pid.SetMode(AUTOMATIC);
-  yaw_angle_compensator.SetMode(AUTOMATIC);
 
   motor_1_speed_pid.SetOutputLimits(-255, 255);                         // controller effort limit
   motor_2_speed_pid.SetOutputLimits(-255, 255);
   motor_3_speed_pid.SetOutputLimits(-255, 255);
-  yaw_angle_compensator.SetOutputLimits(-5, 5);
 
+#ifdef READ_IMU
   IMU.begin();                                                          // init GY-80
+#endif
 
   nh.initNode();                                                        // ROS interface init
   nh.subscribe(sub);
@@ -114,5 +126,8 @@ void loop() {
   calculate_wheel_w(w, vx, vy);      // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
-  //  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
+
+#ifdef PID_TUNING
+  monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
+#endif
 }
