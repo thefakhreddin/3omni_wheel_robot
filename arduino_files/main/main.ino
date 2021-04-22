@@ -1,4 +1,5 @@
 #define USE_USBCON
+//#define SERIAL_DEBUGGING
 //#define PID_TUNING
 //#define READ_IMU
 
@@ -8,6 +9,9 @@
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
+#include <tf/tf.h>
+#include <ros/time.h>
+#include <tf/transform_broadcaster.h>
 #include <sensor_msgs/LaserScan.h>
 
 #ifdef READ_IMU
@@ -43,6 +47,10 @@ double motor_pwm[] = {0, 0, 0};         // controller effort
 double wheel_w_ds[] = {0, 0, 0};        // desigered omega of the wheels (rad/s)
 double w = 0 , vx = 0, vy = 0;          // robot's desigered status
 double w_ac = 0 , vx_ac = 0, vy_ac = 0; // robot's acctual status
+double alpha = 0, x_pos = 0, y_pos = 0; // robot's acctual position and orientation
+
+double last_time = 0;                   // to keep track of elapsed time in every itteration
+
 #ifdef READ_IMU
 double yaw_w = 0;                                    // robot's actual yaw angular vel (yaw dot)
 double yaw_w_ds = 0;                                 // robot's desigered yaw anglular vel (yaw dot)
@@ -50,7 +58,7 @@ double yaw = 0;                                      // robot's actual yaw angle
 #endif
 
 const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;         // pid controller for wheels speed control
-const double pidSampelingTime = 20;                             // pid Sampeling Time (ms)
+const double sampelingTime = 20;                                // pid Sampeling Time (ms)
 
 auto timer = timer_create_default();                    // timer object for sampling the encoder
 
@@ -66,18 +74,23 @@ PID motor_3_speed_pid(&wheel_w[2], &motor_pwm[2], &wheel_w_ds[2], Kp_wheel, Ki_w
 GY80 IMU = GY80();                                                                       // IMU object of GY80 class
 #endif
 
-ros::NodeHandle  nh;                                                                     // ROS node handler
+//ros::NodeHandle  nh;                                                                     // ROS node handler
+//geometry_msgs::TransformStamped t;
+//tf::TransformBroadcaster broadcaster;
 
-void update_cmd_pos( const geometry_msgs::Twist& cmd_vel) {                             // input command state handler function
+char base_link[] = "/base_link";
+char odom[] = "/odom";
+
+void update_cmd_pos(const geometry_msgs::Twist& cmd_vel) {                              // input command state handler function
   vx = cmd_vel.linear.x;
   vy = cmd_vel.linear.y;
   w  = cmd_vel.angular.z;
 }
 
-ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
+//ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
 
 void setup() {
-#ifdef PID_TUNING
+#ifdef SERIAL_DEBUGGING
   Serial.begin(9600);
 #endif
 
@@ -95,7 +108,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(encoder_3_a), encoder_handler_3_a, CHANGE);
   attachInterrupt(digitalPinToInterrupt(encoder_3_b), encoder_handler_3_b, CHANGE);
 
-  timer.every(pidSampelingTime, update_pid_controllers);                // sampling period
+  timer.every(sampelingTime, refresh_contorls);                         // sampling period
 
 #ifdef PID_TUNING
   tuning_setpoint_timer.every(3000, setpoint_generator);                // setpoint change interval for pid tuning
@@ -113,8 +126,9 @@ void setup() {
   IMU.begin();                                                          // init GY-80
 #endif
 
-  nh.initNode();                                                        // ROS interface init
-  nh.subscribe(sub);
+//  nh.initNode();                                                        // ROS interface init
+//  nh.subscribe(sub);
+//  broadcaster.init(nh);
 
   pinMode(LED_BUILTIN, OUTPUT);                                         // on-board LED for debugging
 
@@ -122,12 +136,34 @@ void setup() {
 
 
 void loop() {
-  nh.spinOnce();                     // referesh ROS interface
-  calculate_wheel_w();      // calculate motors omega
+  calculate_wheel_w();               // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
-  apply_to_motors();                 // apply controller's effort on the motors
+  //apply_to_motors();                 // apply controller's effort on the motors
+  calculate_robot_velocity();        // calculate the acctual velocity of the robot
 
 #ifdef PID_TUNING
   monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
 #endif
+
+
+//  t.header.frame_id = odom;
+//  t.child_frame_id = base_link;
+//  t.transform.translation.x = 1.0;
+//  t.transform.rotation.x = 0.0;
+//  t.transform.rotation.y = 0.0;
+//  t.transform.rotation.z = 0.0;
+//  t.transform.rotation.w = 1.0;
+//  t.header.stamp = nh.now();
+//  broadcaster.sendTransform(t);
+//  nh.spinOnce();
+
+
+ // nh.spinOnce();                     // referesh ROS interface
+
+  Serial.print(vx_ac);
+  Serial.print("  ");
+  Serial.print(vy_ac);
+  Serial.print("  ");
+  Serial.println(w_ac);
+  
 }

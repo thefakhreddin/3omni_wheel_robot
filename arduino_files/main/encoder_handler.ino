@@ -54,3 +54,11 @@ void encoder_handler_3_b() {
     else en_counter[2]++;
   }
 }
+
+void calculate_motor_speed_from_encoder(float time_elapsed) {
+  for (int i = 0; i < 3; i++) {                                                   // for each wheel
+    float en_counted = en_counter_old[i] - en_counter[i];                         // determine how many paulses has elapsed
+    en_counter_old[i] = en_counter[i];                                            // update the counter log for each wheel
+    wheel_w[i] = ((en_counted / rotation_pls) * 2000 * PI) / time_elapsed;        // calculate the omega of each wheel
+  }
+}
