@@ -7,6 +7,8 @@
 
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/LaserScan.h>
 
 #ifdef READ_IMU
 #include <Wire.h>
@@ -31,15 +33,16 @@
 #define motor_2_pwm 3
 #define motor_3_pwm 4
 
-const long rotation_pls = 750;        // number of paulses in one complete rotation
+const long rotation_pls = 750;          // number of paulses in one complete rotation
 
-long en_counter[] = {0, 0, 0};        // paulse counter for encoders
-long en_counter_old[] = {0, 0, 0};    // paulse counter for encoders log
-long en_counter_time;                 // encoders counter sampling time
-double wheel_w[] = {0, 0, 0};         // acctual omega of the wheels (rad/s)
-double motor_pwm[] = {0, 0, 0};       // controller effort
-double wheel_w_ds[] = {0, 0, 0};      // desigered omega of the wheels (rad/s)
-double w = 0 , vx = 0, vy = 0;        // robot's desigered status
+long en_counter[] = {0, 0, 0};          // paulse counter for encoders
+long en_counter_old[] = {0, 0, 0};      // paulse counter for encoders log
+long en_counter_time;                   // encoders counter sampling time
+double wheel_w[] = {0, 0, 0};           // acctual omega of the wheels (rad/s)
+double motor_pwm[] = {0, 0, 0};         // controller effort
+double wheel_w_ds[] = {0, 0, 0};        // desigered omega of the wheels (rad/s)
+double w = 0 , vx = 0, vy = 0;          // robot's desigered status
+double w_ac = 0 , vx_ac = 0, vy_ac = 0; // robot's acctual status
 #ifdef READ_IMU
 double yaw_w = 0;                                    // robot's actual yaw angular vel (yaw dot)
 double yaw_w_ds = 0;                                 // robot's desigered yaw anglular vel (yaw dot)
@@ -66,12 +69,9 @@ GY80 IMU = GY80();                                                              
 ros::NodeHandle  nh;                                                                     // ROS node handler
 
 void update_cmd_pos( const geometry_msgs::Twist& cmd_vel) {                             // input command state handler function
-  float x = cmd_vel.linear.x;
-  float y = cmd_vel.linear.y;
-  float th = cmd_vel.angular.z;
-  vx = x;
-  vy = y;
-  w = th;
+  vx = cmd_vel.linear.x;
+  vy = cmd_vel.linear.y;
+  w  = cmd_vel.angular.z;
 }
 
 ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
@@ -123,7 +123,7 @@ void setup() {
 
 void loop() {
   nh.spinOnce();                     // referesh ROS interface
-  calculate_wheel_w(w, vx, vy);      // calculate motors omega
+  calculate_wheel_w();      // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
 
