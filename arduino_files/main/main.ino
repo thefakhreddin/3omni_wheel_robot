@@ -60,10 +60,10 @@ double yaw = 0;                                      // robot's actual yaw angle
 const double Kp_wheel = 4, Ki_wheel = 50, Kd_wheel = 0;         // pid controller for wheels speed control
 const double sampelingTime = 20;                                // pid Sampeling Time (ms)
 
-auto timer = timer_create_default();                    // timer object for sampling the encoder
+auto timer = timer_create_default();                            // timer object for sampling the encoder
 
 #ifdef PID_TUNING
-auto tuning_setpoint_timer = timer_create_default();    // setpoint change for pid tuning
+auto tuning_setpoint_timer = timer_create_default();            // setpoint change for pid tuning
 #endif
 
 PID motor_1_speed_pid(&wheel_w[0], &motor_pwm[0], &wheel_w_ds[0], Kp_wheel, Ki_wheel, Kd_wheel, DIRECT);   // pid controller init for each wheel speed control
@@ -71,15 +71,17 @@ PID motor_2_speed_pid(&wheel_w[1], &motor_pwm[1], &wheel_w_ds[1], Kp_wheel, Ki_w
 PID motor_3_speed_pid(&wheel_w[2], &motor_pwm[2], &wheel_w_ds[2], Kp_wheel, Ki_wheel, Kd_wheel, DIRECT);
 
 #ifdef READ_IMU
-GY80 IMU = GY80();                                                                       // IMU object of GY80 class
+GY80 IMU = GY80();                                                                      // IMU object of GY80 class
 #endif
 
-ros::NodeHandle  nh;                                                                     // ROS node handler
-geometry_msgs::TransformStamped t;
-tf::TransformBroadcaster broadcaster;
+ros::NodeHandle  nh;                                                                    // ROS node handler object "nh"
+geometry_msgs::TransformStamped t;                                                      // transform stamp message object "t"
+tf::TransformBroadcaster broadcaster;                                                   // transform broadcaster object "broadcaster"
+nav_msgs::Odometry odom;                                                                // odometry message object "odom"
 
-char base_link[] = "/base";
-char home_link[] = "/home";
+
+char base_link[] = "/base";                                                             // base tf frame representing robots position
+char home_link[] = "/home";                                                             // home tf frame representing origin in sapce
 
 void update_cmd_pos(const geometry_msgs::Twist& cmd_vel) {                              // input command state handler function
   vx = cmd_vel.linear.x;
@@ -87,7 +89,8 @@ void update_cmd_pos(const geometry_msgs::Twist& cmd_vel) {                      
   w  = cmd_vel.angular.z;
 }
 
-ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot theta-dot) listener
+ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot alpha-dot) subscriber
+ros::Publisher odom_pub("odom", &odom);                                                 // odom state (x,y,theta, x.dot, y.dot, alpha.dot) publisher
 
 void setup() {
 #ifdef SERIAL_DEBUGGING
@@ -127,8 +130,9 @@ void setup() {
 #endif
 
   nh.initNode();                                                        // ROS interface init
-  nh.subscribe(sub);
-  broadcaster.init(nh);
+  broadcaster.init(nh);                                                 // initializing node handler broadcaster
+  nh.subscribe(sub);                                                    // subscribing to get command velocities
+  nh.advertise(odom_pub);                                               // advertising odometry state to ros
 
   pinMode(LED_BUILTIN, OUTPUT);                                         // on-board LED for debugging
 
@@ -136,11 +140,12 @@ void setup() {
 
 
 void loop() {
+  if(vx==13.5)digitalWrite(LED_BUILTIN,HIGH);
   calculate_wheel_w();               // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
   calculate_robot_velocity();        // calculate the acctual velocity of the robot
-  compute_tf();                      // handle and compute tf for ros
+  compute_tf_and_odom();             // handle and compute tf for ros
 
 #ifdef PID_TUNING
   monitor_motor_speed();             // monitor desigered and acctual speed of the wheels
