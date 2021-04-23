@@ -10,14 +10,14 @@ void compute_tf_and_odom() {                                // computing and sen
   t.transform.rotation.z = sin(alpha / 2);
   broadcaster.sendTransform(t);
 
-//  odom.pose.pose.position.x = x_pos;                       // odom section
-//  odom.pose.pose.position.y = y_pos;
-//  odom.pose.pose.orientation.w = cos(alpha / 2);
-//  odom.pose.pose.orientation.z = sin(alpha / 2);
-//
-//  odom.child_frame_id = base_link;
-//  odom.twist.twist.linear.x = vx_ac;
-//  odom.twist.twist.linear.y = vy_ac;
-//  odom.twist.twist.angular.z = w_ac;
-//  odom_pub.publish(&odom);
+  base_pos.x = x_pos;                                       // odom section
+  base_pos.y = y_pos;
+  base_pos.theta = alpha;
+
+  base_vel.x = vx_ac;
+  base_vel.y = vy_ac;
+  base_vel.theta = w_ac;
+
+  odom_pos.publish(&base_pos);
+  odom_vel.publish(&base_vel);
 }

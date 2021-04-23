@@ -8,6 +8,7 @@
 
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Pose2D.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 #include <ros/time.h>
@@ -74,11 +75,11 @@ PID motor_3_speed_pid(&wheel_w[2], &motor_pwm[2], &wheel_w_ds[2], Kp_wheel, Ki_w
 GY80 IMU = GY80();                                                                      // IMU object of GY80 class
 #endif
 
-ros::NodeHandle  nh;                                                                    // ROS node handler object "nh"
-geometry_msgs::TransformStamped t;                                                      // transform stamp message object "t"
-tf::TransformBroadcaster broadcaster;                                                   // transform broadcaster object "broadcaster"
-nav_msgs::Odometry odom;                                                                // odometry message object "odom"
-
+ros::NodeHandle  nh;                                                          // ROS node handler object "nh"
+geometry_msgs::TransformStamped t;                                            // transform stamp message object "t"
+tf::TransformBroadcaster broadcaster;                                         // transform broadcaster object "broadcaster"
+geometry_msgs::Pose2D base_pos;                                               // both pos. and .vel of the robot are transmitted to handle 
+geometry_msgs::Pose2D base_vel;                                               // "odom" in another node. odom message is too large for arduino buffer.
 
 char base_link[] = "/base";                                                             // base tf frame representing robots position
 char home_link[] = "/home";                                                             // home tf frame representing origin in sapce
@@ -90,7 +91,8 @@ void update_cmd_pos(const geometry_msgs::Twist& cmd_vel) {                      
 }
 
 ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", &update_cmd_pos);                  // command state (x-dot y-dot alpha-dot) subscriber
-ros::Publisher odom_pub("odom", &odom);                                                 // odom state (x,y,theta, x.dot, y.dot, alpha.dot) publisher
+ros::Publisher odom_pos("odom_pos", &base_pos);                                         // odom state (x,y,theta, x.dot, y.dot, alpha.dot) publisher
+ros::Publisher odom_vel("odom_vel", &base_vel);
 
 void setup() {
 #ifdef SERIAL_DEBUGGING
@@ -132,7 +134,8 @@ void setup() {
   nh.initNode();                                                        // ROS interface init
   broadcaster.init(nh);                                                 // initializing node handler broadcaster
   nh.subscribe(sub);                                                    // subscribing to get command velocities
-  nh.advertise(odom_pub);                                               // advertising odometry state to ros
+  nh.advertise(odom_pos);                                               // advertising odometry state to ros
+  nh.advertise(odom_vel);
 
   pinMode(LED_BUILTIN, OUTPUT);                                         // on-board LED for debugging
 
@@ -140,7 +143,7 @@ void setup() {
 
 
 void loop() {
-  if(vx==13.5)digitalWrite(LED_BUILTIN,HIGH);
+  if (vx == 13.5)digitalWrite(LED_BUILTIN, HIGH);
   calculate_wheel_w();               // calculate motors omega
   refresh_timers();                  // update timers for sampling and contorlling
   apply_to_motors();                 // apply controller's effort on the motors
